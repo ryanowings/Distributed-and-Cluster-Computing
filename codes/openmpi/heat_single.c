@@ -19,6 +19,30 @@
 #define BROWN    "03 03 00 "
 #define BLACK    "00 00 00 "
 
+MPI_Init(&argc, &argv);
+
+int rank, size;
+
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+int room_width = 1000;
+int room_height = 1000;
+
+// Send bottom row down
+if (rank < size-1)
+    MPI_Send(temps + width*slice_height, width, MPI_FLOAT, rank+1, 0, MPI_COMM_WORLD);
+if (rank > 0)
+{
+    // Receive ghost row from above
+    MPI_Recv(temps, width, MPI_FLOAT, rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    // Send top row up
+    MPI_Send(temps + width, width, MPI_FLOAT, rank-1, 1, MPI_COMM_WORLD);
+}
+// Receive ghost row from below
+if (rank < size-1)
+    MPI_Recv(temps + width*(slice_height+1), width, MPI_FLOAT, rank+1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
 // copy new grid to the old grid
 void copyNewToOld(float grid_a[ROWS][COLS], float grid_b[ROWS][COLS]) {
   int x, y;
