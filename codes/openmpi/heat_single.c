@@ -19,6 +19,9 @@
 #define BROWN    "03 03 00 "
 #define BLACK    "00 00 00 "
 
+int main(int argc, char **argv)
+{
+	
 MPI_Init(&argc, &argv);
 
 int rank, size;
@@ -75,6 +78,7 @@ if(rank ==0)
 
 MPI_Finalize();
 return 0;
+}
 // copy new grid to the old grid
 void copyNewToOld(float grid_a[ROWS][COLS], float grid_b[ROWS][COLS]) {
   int x, y;
