@@ -73,6 +73,8 @@ MPI_Gatherv(local_array, rank_height*room_width, MPI_FLOAT, full_array, sizes, d
 if(rank ==0)
 	printGridtoFile(full_array);
 
+MPI_Finalize();
+return 0;
 // copy new grid to the old grid
 void copyNewToOld(float grid_a[ROWS][COLS], float grid_b[ROWS][COLS]) {
   int x, y;
