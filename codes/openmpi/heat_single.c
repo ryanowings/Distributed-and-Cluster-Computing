@@ -25,23 +25,53 @@ int rank, size;
 
 MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 MPI_Comm_size(MPI_COMM_WORLD, &size);
-
+MPI_Status status
 int room_width = 1000;
 int room_height = 1000;
 
+int rank_height = room_height*(rank+1)/size - room_height*rank/size;//each rows section to calc.
+
+float local_array = (float **)malloc(row_width*(rank_height+2)*sizeof(float));
+float full_array = (float **)malloc(row_width*(rank_height+2)*sizeof(float));
+
+
+
 // Send bottom row down
 if (rank < size-1)
-    MPI_Send(temps + width*slice_height, width, MPI_FLOAT, rank+1, 0, MPI_COMM_WORLD);
+{
+    MPI_Send(local_array + room_width*rank_height, room_width, MPI_FLOAT, rank+1, 0, MPI_COMM_WORLD);
+    MPI_Recv(local_array + room_width*(rank_height+1), room_width, MPI_FLOAT, rank+1, 1, MPI_COMM_WORLD, &status);
+}
 if (rank > 0)
 {
     // Receive ghost row from above
-    MPI_Recv(temps, width, MPI_FLOAT, rank-1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    MPI_Recv(local_array, room_width, MPI_FLOAT, rank-1, 0, MPI_COMM_WORLD, &status);
     // Send top row up
-    MPI_Send(temps + width, width, MPI_FLOAT, rank-1, 1, MPI_COMM_WORLD);
+    MPI_Send(local_array + room_width, room_width, MPI_FLOAT, rank-1, 1, MPI_COMM_WORLD);
 }
-// Receive ghost row from below
-if (rank < size-1)
-    MPI_Recv(temps + width*(slice_height+1), width, MPI_FLOAT, rank+1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+// Copy the current slice to the old slice
+copyNewToOld(local_array, full_array);
+// Generate a new current slice based on the old slice
+calculateNew(local_array, full_array);
+
+disps = (int *)malloc(size*sizeof(int));
+sizes = (int *)malloc(size*sizeof(int));
+// Calculate displacements and sizes
+disps[0] = 0;
+for (i = 1; i <= size; i++)
+{
+    int next = (room_height*i/size) * width;
+    if (i < size)
+	disps[i] = next;
+    sizes[i-1] = next - disps[i-1];
+}
+
+MPI_Gatherv(local_array, rank_height*room_width, MPI_FLOAT, full_array, sizes, disps, MPI_FLOAT, 0, MPI_COMM_WORLD);
+
+
+if(rank ==0)
+	printGridtoFile(full_array);
 
 // copy new grid to the old grid
 void copyNewToOld(float grid_a[ROWS][COLS], float grid_b[ROWS][COLS]) {
